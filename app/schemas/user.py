@@ -15,6 +15,21 @@ class MessageResponse(BaseModel):
 class AuthTokenResponse(BaseModel):
     access_token: str
     token_type: str
+    email: EmailStr
+
+class ProfileUpdate(BaseModel):
+    full_name: str | None = None
+    phone_number: str | None = None
+    preferred_area: str | None = None
+    bio: str | None = None
+
+class ProfileResponse(BaseModel):
+    email: EmailStr
+    full_name: str | None = None
+    phone_number: str | None = None
+    preferred_area: str | None = None
+    bio: str | None = None
+    avatar_url: str | None = None
 
 class UserResponse(BaseModel):
     id: int

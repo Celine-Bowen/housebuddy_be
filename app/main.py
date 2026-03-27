@@ -1,11 +1,14 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from app.routes import user_routes, auth_routes
 from app.db.database import Base, engine
 from app.db import models  # noqa: F401
 
 app = FastAPI(title="HomeBuddy Backend")
+os.makedirs("uploads", exist_ok=True)
 
 # origins = [
 #     "http://localhost:56570",  # your frontend
@@ -26,11 +29,20 @@ app.add_middleware(
 # Include routes
 # app.include_router(user_routes.router, prefix="/users", tags=["users"])
 app.include_router(auth_routes.router, prefix="/auth", tags=["auth"])
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.on_event("startup")
 def on_startup() -> None:
     # Dev-friendly: ensure core tables exist for UI testing.
     Base.metadata.create_all(bind=engine)
+    # Keep local/dev DB in sync for new profile avatar field.
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "ALTER TABLE user_profiles "
+                "ADD COLUMN IF NOT EXISTS avatar_url VARCHAR"
+            )
+        )
 
 @app.get("/")
 def root():
