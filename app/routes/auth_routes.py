@@ -1,9 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from app.db.database import SessionLocal
 from app.db.models import User
-from app.schemas.user import UserCreate, UserLogin
-from app.core.security import hash_password, verify_password, create_access_token
+from app.schemas.user import (
+    AuthTokenResponse,
+    MessageResponse,
+    UserCreate,
+    UserLogin,
+)
+from app.core.security import (
+    create_access_token,
+    ensure_bcrypt_compatible_password,
+    hash_password,
+    verify_password,
+)
 
 router = APIRouter()
 
@@ -15,36 +26,77 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/register", summary="Register a new user")
+@router.post("/register", response_model=MessageResponse, summary="Register a new user")
+@router.post("/signup", response_model=MessageResponse, summary="Signup a new user")
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    try:
+        try:
+            ensure_bcrypt_compatible_password(user.password)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Password is too long. Please use at most 72 bytes.",
+            ) from exc
 
-    new_user = User(
-        email=user.email,
-        hashed_password=hash_password(user.password)
-    )
+        existing = db.query(User).filter(User.email == user.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+        new_user = User(
+            email=user.email,
+            hashed_password=hash_password(user.password)
+        )
 
-    return {"message": "User created successfully"}
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
 
-@router.post("/login", summary="Login user")
+        return {"message": "User created successfully"}
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error during signup: {exc.__class__.__name__}",
+        ) from exc
+
+@router.post("/login", response_model=AuthTokenResponse, summary="Login user")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
+    try:
+        try:
+            ensure_bcrypt_compatible_password(user.password)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Password is too long. Please use at most 72 bytes.",
+            ) from exc
 
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        db_user = db.query(User).filter(User.email == user.email).first()
 
-    token = create_access_token({"sub": db_user.email})
+        if not db_user or not verify_password(user.password, db_user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    return {"access_token": token, "token_type": "bearer"}
+        token = create_access_token({"sub": db_user.email})
 
-@router.post("/reset-password", summary="Reset password (basic)")
+        return {"access_token": token, "token_type": "bearer"}
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error during login: {exc.__class__.__name__}",
+        ) from exc
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Reset password (basic)",
+)
 def reset_password(user: UserLogin, db: Session = Depends(get_db)):
+    try:
+        ensure_bcrypt_compatible_password(user.password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Password is too long. Please use at most 72 bytes.",
+        ) from exc
+
     db_user = db.query(User).filter(User.email == user.email).first()
 
     if not db_user:
