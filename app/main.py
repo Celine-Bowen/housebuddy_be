@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
-from app.routes import user_routes, auth_routes
+from app.routes import auth_routes, listing_routes, user_routes
 from app.db.database import Base, engine
 from app.db import models  # noqa: F401
 
@@ -29,6 +29,7 @@ app.add_middleware(
 # Include routes
 # app.include_router(user_routes.router, prefix="/users", tags=["users"])
 app.include_router(auth_routes.router, prefix="/auth", tags=["auth"])
+app.include_router(listing_routes.router, prefix="/listings", tags=["listings"])
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.on_event("startup")
@@ -41,6 +42,36 @@ def on_startup() -> None:
             text(
                 "ALTER TABLE user_profiles "
                 "ADD COLUMN IF NOT EXISTS avatar_url VARCHAR"
+            )
+        )
+        connection.execute(
+            text(
+                "ALTER TABLE listings "
+                "ADD COLUMN IF NOT EXISTS rating_security INTEGER DEFAULT 3"
+            )
+        )
+        connection.execute(
+            text(
+                "ALTER TABLE listings "
+                "ADD COLUMN IF NOT EXISTS rating_water INTEGER DEFAULT 3"
+            )
+        )
+        connection.execute(
+            text(
+                "ALTER TABLE listings "
+                "ADD COLUMN IF NOT EXISTS rating_electricity INTEGER DEFAULT 3"
+            )
+        )
+        connection.execute(
+            text(
+                "ALTER TABLE listings "
+                "ADD COLUMN IF NOT EXISTS rating_noise INTEGER DEFAULT 3"
+            )
+        )
+        connection.execute(
+            text(
+                "ALTER TABLE listings "
+                "ADD COLUMN IF NOT EXISTS rating_traffic INTEGER DEFAULT 3"
             )
         )
 
