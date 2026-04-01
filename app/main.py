@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
-from app.routes import auth_routes, listing_routes, user_routes
+from app.routes import auth_routes, insight_routes, listing_routes, user_routes
 from app.db.database import Base, engine
 from app.db import models  # noqa: F401
 
@@ -30,6 +30,7 @@ app.add_middleware(
 # app.include_router(user_routes.router, prefix="/users", tags=["users"])
 app.include_router(auth_routes.router, prefix="/auth", tags=["auth"])
 app.include_router(listing_routes.router, prefix="/listings", tags=["listings"])
+app.include_router(insight_routes.router, prefix="/insights", tags=["insights"])
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.on_event("startup")

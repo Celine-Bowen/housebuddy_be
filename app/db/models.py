@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 
@@ -32,6 +32,11 @@ class User(Base):
     reports = relationship(
         "ListingReport",
         back_populates="reporter",
+        cascade="all, delete-orphan",
+    )
+    insights = relationship(
+        "AreaInsight",
+        back_populates="user",
         cascade="all, delete-orphan",
     )
 
@@ -165,3 +170,22 @@ class ListingConnection(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     listing = relationship("Listing", back_populates="connections")
+
+
+class AreaInsight(Base):
+    __tablename__ = "area_insights"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    location = Column(String, nullable=False, index=True)
+    latitude = Column(Float, nullable=False, index=True)
+    longitude = Column(Float, nullable=False, index=True)
+    rating_security = Column(Integer, nullable=False, default=3)
+    rating_water = Column(Integer, nullable=False, default=3)
+    rating_electricity = Column(Integer, nullable=False, default=3)
+    rating_noise = Column(Integer, nullable=False, default=3)
+    rating_traffic = Column(Integer, nullable=False, default=3)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="insights")

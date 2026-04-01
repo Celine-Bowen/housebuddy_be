@@ -199,6 +199,11 @@ def create_listing(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if not payload.media:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one image or video is required",
+        )
     normalized_phone = _normalize_and_validate_phone(payload.contact_phone)
     _validate_roommate_phone(payload.category, normalized_phone)
     listing = Listing(
@@ -278,6 +283,11 @@ def update_listing(
     _validate_roommate_phone(listing.category, listing.contact_phone)
 
     if payload.media is not None:
+        if not payload.media:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one image or video is required",
+            )
         db.query(ListingMedia).filter(ListingMedia.listing_id == listing.id).delete()
         for item in payload.media:
             db.add(

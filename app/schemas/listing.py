@@ -21,7 +21,7 @@ class ListingCreate(BaseModel):
     rating_electricity: int = Field(ge=1, le=5, default=3)
     rating_noise: int = Field(ge=1, le=5, default=3)
     rating_traffic: int = Field(ge=1, le=5, default=3)
-    media: list[ListingMediaPayload] = Field(default_factory=list)
+    media: list[ListingMediaPayload] = Field(min_length=1)
 
 
 class ListingUpdate(BaseModel):
