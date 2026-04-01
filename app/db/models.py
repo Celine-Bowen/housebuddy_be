@@ -34,6 +34,24 @@ class User(Base):
         back_populates="reporter",
         cascade="all, delete-orphan",
     )
+    buddy_profile = relationship(
+        "BuddyProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    buddy_connections_sent = relationship(
+        "BuddyConnection",
+        foreign_keys="BuddyConnection.requester_id",
+        back_populates="requester",
+        cascade="all, delete-orphan",
+    )
+    buddy_connections_received = relationship(
+        "BuddyConnection",
+        foreign_keys="BuddyConnection.target_user_id",
+        back_populates="target_user",
+        cascade="all, delete-orphan",
+    )
     insights = relationship(
         "AreaInsight",
         back_populates="user",
@@ -170,6 +188,40 @@ class ListingConnection(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     listing = relationship("Listing", back_populates="connections")
+
+
+class BuddyProfile(Base):
+    __tablename__ = "buddy_profiles"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=False)
+    mode = Column(String, nullable=False, default="buddy")
+    note = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="buddy_profile")
+
+
+class BuddyConnection(Base):
+    __tablename__ = "buddy_connections"
+    __table_args__ = (UniqueConstraint("requester_id", "target_user_id", name="uq_buddy_connection"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    mode = Column(String, nullable=False, default="buddy")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    requester = relationship(
+        "User",
+        foreign_keys=[requester_id],
+        back_populates="buddy_connections_sent",
+    )
+    target_user = relationship(
+        "User",
+        foreign_keys=[target_user_id],
+        back_populates="buddy_connections_received",
+    )
 
 
 class AreaInsight(Base):
